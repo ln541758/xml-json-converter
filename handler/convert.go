@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"time"
@@ -14,14 +13,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// /convert endpoint
+// convert endpoint
 func ConvertHandler(w http.ResponseWriter, r *http.Request) {
-	// read XML from request body
-	xmlData, err := io.ReadAll(r.Body)
+	// read XML from local file
+	xmlData, err := os.ReadFile("sample/test.xml")
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		http.Error(w, "Failed to read sample.xml", http.StatusInternalServerError)
 		return
 	}
+
 	// convert XML to JSON
 	jsonData, err := XMLToJSON(xmlData)
 	if err != nil {
