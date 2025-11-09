@@ -35,8 +35,8 @@ func ConvertHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 
 	// write to local file (for local debugging)
-	filename := fmt.Sprintf("./output/result-%d.json", time.Now().Unix())
-	os.MkdirAll("./output", 0755)
+	filename := fmt.Sprintf("./sample/result-%d.json", time.Now().Unix())
+	os.MkdirAll("./sample", 0755)
 	os.WriteFile(filename, jsonData, 0644)
 
 	// upload to S3 (for production)
