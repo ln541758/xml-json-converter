@@ -8,12 +8,24 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
   }
   required_version = ">= 1.3.0"
 }
 
 provider "aws" {
   region = var.region
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    token                  = data.aws_eks_cluster_auth.main.token
+  }
 }
 
 # ECR login for Docker provider
@@ -177,14 +189,13 @@ resource "kubernetes_service" "parser_service" {
 }
 
 # prometheus
-module "prometheus" {
-  source  = "terraform-helm/release"
-  version = "1.8.0"
-
+resource "helm_release" "prometheus" {
   name       = "prometheus"
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "prometheus"
   namespace  = "monitoring"
+
+  create_namespace = true
 
   set {
     name  = "server.persistentVolume.enabled"
@@ -196,3 +207,4 @@ module "prometheus" {
     value = "false"
   }
 }
+
