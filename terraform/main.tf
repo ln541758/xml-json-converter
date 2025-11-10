@@ -120,11 +120,24 @@ resource "docker_image" "parser" {
     context    = "${path.module}/.."
     dockerfile = "Dockerfile"
   }
+  
+  # Force rebuild on every terraform apply
+  triggers = {
+    always_run = timestamp()
+  }
 }
 
 # Push the image to ECR
 resource "docker_registry_image" "parser" {
   name = docker_image.parser.name
+  
+  # Keep old images in ECR (don't delete on destroy)
+  keep_remotely = true
+  
+  # Force push on every apply to ensure latest image is in ECR
+  triggers = {
+    image_id = docker_image.parser.image_id
+  }
 }
 
 # Kubernetes provider for deployment
@@ -166,8 +179,18 @@ resource "kubernetes_deployment" "parser" {
         container {
           name  = "parser"
           image = "${aws_ecr_repository.parser_repo.repository_url}:latest"
+          # Always pull the latest image from ECR
+          image_pull_policy = "Always"
           port {
             container_port = var.container_port
+          }
+          env {
+            name  = "S3_BUCKET_NAME"
+            value = aws_s3_bucket.xml_json_output.bucket
+          }
+          env {
+            name  = "AWS_REGION"
+            value = var.region
           }
         }
       }
