@@ -42,12 +42,10 @@ locust -f locustfile.py \
     --spawn-rate="$SPAWN_RATE" \
     --run-time="$RUN_TIME" \
     --headless \
-    --html=load_test_report.html \
-    --csv=load_test_results
+    --html=load_test_report.html
 
 echo ""
 echo -e "${GREEN}Load test completed!${NC}"
 echo "Results saved to:"
-echo "  - $SCRIPT_DIR/load_test_report.html (detailed HTML report)"
-echo "  - $SCRIPT_DIR/load_test_results_*.csv (CSV data)"
+echo "  - $SCRIPT_DIR/load_test_report.html"
 

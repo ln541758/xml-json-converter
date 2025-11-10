@@ -27,81 +27,49 @@ pip install -r requirements.txt
 
 ## Quick Test (Single Request)
 
-Before running load tests, verify the endpoint works:
+Before running load tests, verify the endpoint works with a simple curl:
 
 ```bash
-# Test with sample XML file
-./test_single_request.sh http://YOUR-LOADBALANCER-URL.elb.amazonaws.com
-
-# Test with custom XML (20 log entries)
-./test_with_custom_xml.sh http://YOUR-LOADBALANCER-URL.elb.amazonaws.com 20
+curl -X POST \
+  -H "Content-Type: application/xml" \
+  -d '<logs><log><id>1</id><level>INFO</level><msg>Test</msg></log></logs>' \
+  http://YOUR-LOADBALANCER-URL.elb.amazonaws.com/convert
 ```
 
-## Load Testing
+Expected response: `{"logs":{"log":{"id":"1","level":"INFO","msg":"Test"}}}`
 
-### Option 1: Using the provided script (recommended)
+## Running Load Tests
 
 ```bash
-# Make the script executable
+# Make the script executable (first time only)
 chmod +x run_load_test.sh
 
 # Run with default settings (100 users, 60 seconds)
-./run_load_test.sh
-
-# Run against a remote server
-./run_load_test.sh http://your-loadbalancer-url.com
+./run_load_test.sh http://YOUR-LOADBALANCER-URL
 
 # Customize users, spawn rate, and duration
-./run_load_test.sh http://localhost:8080 200 50 120s
+./run_load_test.sh http://YOUR-LOADBALANCER-URL 200 50 120s
 ```
 
-Parameters:
-- Host: Server URL (default: http://localhost:8080)
-- Users: Number of concurrent users (default: 100)
-- Spawn Rate: Users spawned per second (default: 100)
-- Run Time: Test duration (default: 60s)
+**Parameters:**
+- **Host**: Server URL (required)
+- **Users**: Number of concurrent users (default: 100)
+- **Spawn Rate**: Users spawned per second (default: 100)
+- **Run Time**: Test duration (default: 60s)
 
-### Option 2: Direct Locust commands
+## Test Scenario
 
-**Send 100 requests simultaneously (headless mode):**
-
-```bash
-locust -f locustfile.py \
-    --host=http://localhost:8080 \
-    --users=100 \
-    --spawn-rate=100 \
-    --run-time=60s \
-    --headless
-```
-
-**Launch with Web UI:**
-
-```bash
-locust -f locustfile.py --host=http://localhost:8080
-```
-
-Then open http://localhost:8089 in your browser to control the test.
-
-## Test Scenarios
-
-### XMLConverterUser (Default)
-- Tests POST `/convert` endpoint with XML data in request body
-- Sends 100 concurrent requests with XML payloads
+The load test sends POST requests to `/convert` with XML data:
+- Concurrent requests with XML payloads
 - No wait time between requests for maximum load
 - Validates JSON response
-
-### XMLConverterUserWithGET (For Local Testing)
-- Tests GET `/convert` endpoint (backwards compatibility)
-- Uses local test.xml file on the server
-- For local development only (won't work on EKS)
+- Configurable number of users and spawn rate
 
 ## Output
 
 After running the test, you'll get:
 - **load_test_report.html**: Detailed HTML report with graphs and statistics
-- **load_test_results_stats.csv**: Request statistics
-- **load_test_results_failures.csv**: Failed requests (if any)
-- **load_test_results_stats_history.csv**: Stats over time
+- Console output showing real-time progress and final summary
 
 ## Key Metrics to Watch
 
@@ -126,20 +94,35 @@ After running the test, you'll get:
 ./run_load_test.sh http://your-server 100 100 60s
 ```
 
-## Examples
+## Example Test Scenarios
 
 **Quick burst test (100 concurrent users for 30 seconds):**
 ```bash
-./run_load_test.sh http://localhost:8080 100 100 30s
+./run_load_test.sh http://YOUR-LOADBALANCER-URL 100 100 30s
 ```
 
-**Sustained load test (50 users gradually spawned over 10 seconds, run for 5 minutes):**
+**Sustained load test (50 users gradually spawned, run for 5 minutes):**
 ```bash
-./run_load_test.sh http://localhost:8080 50 5 5m
+./run_load_test.sh http://YOUR-LOADBALANCER-URL 50 10 5m
 ```
 
 **Stress test (500 users):**
 ```bash
-./run_load_test.sh http://localhost:8080 500 50 120s
+./run_load_test.sh http://YOUR-LOADBALANCER-URL 500 50 120s
+```
+
+## Getting LoadBalancer URL
+
+From your terraform directory:
+
+```bash
+cd ../terraform
+terraform output load_balancer_dns
+```
+
+Or using kubectl:
+
+```bash
+kubectl get svc xml-json-parser-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
 
