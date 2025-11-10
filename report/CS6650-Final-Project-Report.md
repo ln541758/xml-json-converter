@@ -3,7 +3,7 @@
 **Team Members:** Yang (Yolanda) He, Yuhao Lu, Yinshan (Lilian) Lin\
 **Date:** November 9, 2025  
 **Course:** CS6650 Building Scalable Distributed Systems  
-**GitHub Repository:** [xml-json-converter](https://github.com/your-repo)
+**GitHub Repository:** [xml-json-converter](https://github.com/ln541758/xml-json-converter/tree/main)
 
 ---
 
@@ -97,6 +97,8 @@ Our experiments are designed to evaluate three critical dimensions of distribute
 - Write comprehensive technical report (Yinshan Lin)
 - Prepare presentation materials (Yolanda He)
 
+![Task](task1.jpg)
+![Task](task2.jpg)
 ---
 
 ## 3. Objectives
@@ -467,8 +469,34 @@ The system should:
 ## 6. Preliminary Results
 
 ### Experiment 1 – Horizontal Scalability (Completed)
-**Current Findings:**  
-- xxx
+#### Initial charts
+- 1 pod: [View Report](../test/exp1/load_test1_report.html)
+- 2 pods: [View Report](../test/exp1/load_test2_report.html)
+- 4 pods: [View Report](../test/exp1/load_test4_report.html)
+- 8 pods: [View Report](../test/exp1/load_test8_report.html)
+
+#### Contract
+| Replicas | # Requests | RPS (req/s) | Avg Latency (ms) | p95 (ms) | Max (ms) | Failures |
+|:--------:|-----------:|------------:|-----------------:|---------:|---------:|---------:|
+| **1 pod** | 29,686 | **538.9** | 181 | **650** | 9,686 | 0 |
+| **2 pods** | 45,949 | **833.3** | 117 | **470** | 1,647 | 0 |
+| **4 pods** | 49,218 | **824.2** | 118 | **410** | 1,951 | 0 |
+| **8 pods** | 37,090 | **682.5** | 141 | **420** | 1,825 | 0 |
+
+#### Analysis
+1 → 2 pods:
+- Throughput rose from ~539 RPS to ~833 RPS (+55%).
+- Average latency dropped from 181 ms to 117 ms, and p95 fell from 650 ms to 470 ms — strong evidence of parallel efficiency.
+
+2 → 4 pods:
+- Throughput remained almost constant (~833 → 824 RPS), indicating the system reached near-optimal scaling.
+- p95 latency decreased slightly (470 → 410 ms), showing marginal tail-latency improvement.
+
+4 → 8 pods:
+- Throughput decreased (~824 → 682 RPS) and latency increased (118 → 141 ms, p95 410 → 420 ms).
+- Suggests a resource or I/O bottleneck (e.g., S3 writes, network saturation, or CPU contention on shared nodes).
+
+System stability: 0 failures across >160 K requests, confirming robust service operation under load.
 
 ### Experiment 2 – Elasticity (Planned)
 
