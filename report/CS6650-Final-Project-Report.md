@@ -475,7 +475,7 @@ The system should:
 - 4 pods: [View Report](../test/exp1/load_test4_report.html)
 - 8 pods: [View Report](../test/exp1/load_test8_report.html)
 
-#### Contract
+#### Contrast
 | Replicas | # Requests | RPS (req/s) | Avg Latency (ms) | p95 (ms) | Max (ms) | Failures |
 |:--------:|-----------:|------------:|-----------------:|---------:|---------:|---------:|
 | **1 pod** | 29,686 | **538.9** | 181 | **650** | 9,686 | 0 |
