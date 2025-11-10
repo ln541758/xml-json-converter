@@ -22,22 +22,25 @@ provider "aws" {
 
 provider "helm" {
   kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    host                   = aws_eks_cluster.main.endpoint
+    cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
     token                  = data.aws_eks_cluster_auth.main.token
   }
 }
 
-# ECR login for Docker provider
+# ECR authentication for Docker provider
+data "aws_ecr_authorization_token" "token" {}
+
 provider "docker" {
   registry_auth {
-    address  = "${aws_ecr_repository.parser_repo.repository_url}"
-    username = "AWS"
-    password = data.aws_ecr_authorization_token.ecr_auth.authorization_token
+    address  = split("/", aws_ecr_repository.parser_repo.repository_url)[0]
+    username = data.aws_ecr_authorization_token.token.user_name
+    password = data.aws_ecr_authorization_token.token.password
   }
 }
 
-data "aws_ecr_authorization_token" "ecr_auth" {}
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
 
 # ECR
 resource "aws_ecr_repository" "parser_repo" {
@@ -62,29 +65,36 @@ data "aws_subnets" "default" {
   }
 }
 
-# EKS cluster
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "19.20.0"
+# EKS cluster - using direct resources for AWS Lab compatibility
+resource "aws_eks_cluster" "main" {
+  name     = var.cluster_name
+  version  = "1.29"
+  role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
 
-  cluster_name    = var.cluster_name
-  cluster_version = "1.29"
-  vpc_id          = data.aws_vpc.default.id
+  vpc_config {
+    subnet_ids = data.aws_subnets.default.ids
+  }
+
+  tags = {
+    Project = "xml-json-converter"
+    Env     = "experiment"
+  }
+}
+
+# EKS Node Group
+resource "aws_eks_node_group" "main" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "xml-json-parser-nodes"
+  node_role_arn   = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
   subnet_ids      = data.aws_subnets.default.ids
 
-  iam_role_arn    = "arn:aws:iam::533267314891:role/c169671a4380641l11480718t1w533267-LabEksClusterRole-pWgqHzcPNGLI"
-  create_iam_role = false
-
-  eks_managed_node_groups = {
-    default = {
-      desired_size   = var.node_count
-      max_size       = var.node_max
-      min_size       = var.node_min
-      instance_types = [var.instance_type]
-
-      iam_role_arn = "arn:aws:iam::533267314891:role/c169671a4380641l11480718t1w533267-LabEksNodeRole-gXoz4U7aOk8"
-    }
+  scaling_config {
+    desired_size = var.node_count
+    max_size     = var.node_max
+    min_size     = var.node_min
   }
+
+  instance_types = [var.instance_type]
 
   tags = {
     Project = "xml-json-converter"
@@ -94,7 +104,7 @@ module "eks" {
 
 # S3 bucket for results
 resource "aws_s3_bucket" "xml_json_output" {
-  bucket        = "${var.cluster_name}-bucket"
+  bucket        = "${var.cluster_name}-${data.aws_caller_identity.current.account_id}-bucket"
   force_destroy = true
   tags = {
     Project = "xml-json-converter"
@@ -102,43 +112,37 @@ resource "aws_s3_bucket" "xml_json_output" {
   }
 }
 
-# build and push docker image
+# Build the Docker image
 resource "docker_image" "parser" {
   name = "${aws_ecr_repository.parser_repo.repository_url}:latest"
-
+  
   build {
-    context    = "../../xml-json-converter"
-    dockerfile = "../../xml-json-converter/Dockerfile"
-    tag        = ["${aws_ecr_repository.parser_repo.repository_url}:latest"]
-  }
-
-  triggers = {
-    dir_sha1 = sha1(join("", [for f in fileset("../../xml-json-converter", "**") : filesha1("../../xml-json-converter/${f}")]))
+    context    = "${path.module}/.."
+    dockerfile = "Dockerfile"
   }
 }
 
-resource "docker_registry_image" "parser_push" {
-  name          = docker_image.parser.name
-  keep_remotely = true
-  triggers = {
-    image_id = docker_image.parser.image_id
-  }
+# Push the image to ECR
+resource "docker_registry_image" "parser" {
+  name = docker_image.parser.name
 }
 
 # Kubernetes provider for deployment
 data "aws_eks_cluster_auth" "main" {
-  name = module.eks.cluster_name
+  name = aws_eks_cluster.main.name
 }
 
 provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  host                   = aws_eks_cluster.main.endpoint
+  cluster_ca_certificate = base64decode(aws_eks_cluster.main.certificate_authority[0].data)
   token                  = data.aws_eks_cluster_auth.main.token
 }
 
 
 # Deploy parser on EKS
 resource "kubernetes_deployment" "parser" {
+  depends_on = [aws_eks_node_group.main, docker_registry_image.parser]
+  
   metadata {
     name = "xml-json-parser"
     labels = {
@@ -161,7 +165,7 @@ resource "kubernetes_deployment" "parser" {
       spec {
         container {
           name  = "parser"
-          image = docker_registry_image.parser_push.name   # Auto-pulled from ECR
+          image = "${aws_ecr_repository.parser_repo.repository_url}:latest"
           port {
             container_port = var.container_port
           }

@@ -1,9 +1,9 @@
 output "eks_cluster_name" {
-  value = module.eks.cluster_name
+  value = aws_eks_cluster.main.name
 }
 
 output "eks_cluster_endpoint" {
-  value = module.eks.cluster_endpoint
+  value = aws_eks_cluster.main.endpoint
 }
 
 output "s3_bucket_name" {
@@ -11,7 +11,7 @@ output "s3_bucket_name" {
 }
 
 output "parser_image_url" {
-  value = docker_registry_image.parser_push.name
+  value = docker_registry_image.parser.name
 }
 
 output "load_balancer_dns" {
