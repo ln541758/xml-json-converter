@@ -93,28 +93,70 @@ monitor_hpa() {
     done
 }
 
-# Send messages at rate
+# Send messages at rate using batched API calls
 send_messages_at_rate() {
     local rate=$1  # messages per second
     local duration=$2  # seconds
     local total_messages=$((rate * duration))
+    local batch_size=10  # SQS batch limit
+    local num_batches=$((total_messages / batch_size))
     
-    echo "Sending $total_messages messages at ${rate} msg/sec for ${duration}s..."
+    # Keep concurrency reasonable to avoid overwhelming the system
+    # Even for burst, we don't need massive parallelism - SQS can handle the queue
+    local max_concurrent=30  # Safe default that won't kill your computer
     
-    for i in $(seq 1 $total_messages); do
-        aws sqs send-message \
-            --queue-url "$SQS_URL" \
-            --message-body "test.xml" \
-            --output text > /dev/null &
+    echo "Sending $total_messages messages in $num_batches batches at ${rate} msg/sec for ${duration}s..."
+    echo "Concurrency: $max_concurrent concurrent batches"
+    
+    local batch_count=0
+    local start_time=$(date +%s)
+    
+    for i in $(seq 1 $num_batches); do
+        # Progress indicator (less frequent to not interfere with monitoring)
+        if [ $((i % 1000)) -eq 0 ]; then
+            echo "  [SEND] Progress: $i / $num_batches batches sent..."
+        fi
+        # Build batch entries (10 messages per batch)
+        local entries=""
+        for j in $(seq 0 9); do
+            local msg_id="msg-$(date +%s%N)-$i-$j"
+            if [ -z "$entries" ]; then
+                entries="Id=$msg_id,MessageBody=test.xml"
+            else
+                entries="$entries Id=$msg_id,MessageBody=test.xml"
+            fi
+        done
         
-        # Rate limiting
-        if [ $((i % rate)) -eq 0 ]; then
-            sleep 1
+        # Send batch in background
+        aws sqs send-message-batch \
+            --queue-url "$SQS_URL" \
+            --entries $entries \
+            --output text > /dev/null 2>&1 &
+        
+        batch_count=$((batch_count + 1))
+        
+        # Wait after every max_concurrent batches to limit parallelism
+        if [ $((batch_count % max_concurrent)) -eq 0 ]; then
+            wait  # Wait for current batch to finish
+            
+            # Only enforce rate limiting for low-rate phases (baseline/scale-down)
+            if [ $rate -lt 50 ]; then
+                local messages_sent=$((i * batch_size))
+                local elapsed=$(($(date +%s) - start_time))
+                local expected_time=$((messages_sent / rate))
+                
+                if [ $elapsed -lt $expected_time ]; then
+                    local sleep_time=$((expected_time - elapsed))
+                    if [ $sleep_time -gt 0 ]; then
+                        sleep $sleep_time
+                    fi
+                fi
+            fi
         fi
     done
     
-    wait  # Wait for all background jobs
-    echo "✅ Sent $total_messages messages"
+    wait  # Wait for remaining batches
+    echo "✅ Sent $total_messages messages ($num_batches batches)"
 }
 
 # Start test
