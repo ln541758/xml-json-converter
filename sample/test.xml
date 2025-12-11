@@ -1,0 +1,22 @@
+<logs>
+  <log><id>0</id><level>INFO</level><msg>Message 0</msg></log>
+  <log><id>1</id><level>INFO</level><msg>Message 1</msg></log>
+  <log><id>2</id><level>INFO</level><msg>Message 2</msg></log>
+  <log><id>3</id><level>INFO</level><msg>Message 3</msg></log>
+  <log><id>4</id><level>INFO</level><msg>Message 4</msg></log>
+  <log><id>5</id><level>INFO</level><msg>Message 5</msg></log>
+  <log><id>6</id><level>INFO</level><msg>Message 6</msg></log>
+  <log><id>7</id><level>INFO</level><msg>Message 7</msg></log>
+  <log><id>8</id><level>INFO</level><msg>Message 8</msg></log>
+  <log><id>9</id><level>INFO</level><msg>Message 9</msg></log>
+  <log><id>10</id><level>INFO</level><msg>Message 10</msg></log>
+  <log><id>11</id><level>INFO</level><msg>Message 11</msg></log>
+  <log><id>12</id><level>INFO</level><msg>Message 12</msg></log>
+  <log><id>13</id><level>INFO</level><msg>Message 13</msg></log>
+  <log><id>14</id><level>INFO</level><msg>Message 14</msg></log>
+  <log><id>15</id><level>INFO</level><msg>Message 15</msg></log>
+  <log><id>16</id><level>INFO</level><msg>Message 16</msg></log>
+  <log><id>17</id><level>INFO</level><msg>Message 17</msg></log>
+  <log><id>18</id><level>INFO</level><msg>Message 18</msg></log>
+  <log><id>19</id><level>INFO</level><msg>Message 19</msg></log>
+</logs>

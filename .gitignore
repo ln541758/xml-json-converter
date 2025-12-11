@@ -1,0 +1,32 @@
+# --- Go build ---
+bin/
+*.exe
+*.out
+*.test
+*.log
+
+# --- Terraform cache ---
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# --- Docker ---
+*.tar
+*.zip
+
+# --- IDE / System files ---
+.vscode/
+.idea/
+.DS_Store
+
+# --- Build output ---
+output/
+dist/
+
+# --- Python / Testing ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+test/load_test_report.html
