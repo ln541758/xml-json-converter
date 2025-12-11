@@ -4,22 +4,10 @@ A scalable, cloud-native Go-based service for converting DevOps XML logs to JSON
 
 **GitHub Repository:** https://github.com/ln541758/xml-json-converter
 
-## 🚀 Why This Project?
+This project implements a cloud-native XML-to-JSON conversion service designed to handle large-scale workloads reliably and efficiently.
+The system follows an asynchronous, distributed architecture using AWS EKS, SQS, and S3, ensuring high scalability, resilience to failures, and smooth handling of bursty traffic.
 
-Many DevOps tools (Jenkins, JUnit, Maven, Jacoco) produce XML logs, while modern monitoring systems (ELK, Grafana Loki) require JSON. This format mismatch creates significant operational friction:
-
-- **DevOps Teams**: Manual log conversion is error-prone and delays incident response
-- **Platform Engineers**: Inability to standardize logging infrastructure across legacy and modern tools  
-- **Business Impact**: Poor observability leads to longer MTTR and increased downtime costs
-- **Developer Experience**: Lack of real-time feedback from CI/CD pipelines slows development
-
-This project bridges that gap with a high-performance, distributed conversion service running on Kubernetes with AWS integration, demonstrating practical application of distributed systems concepts learned in CS6650.
-
-## 👥 Team
-
-- **Yang (Yolanda) He** - Infrastructure & DevOps
-- **Yuhao Lu** - Observability & Performance Engineering  
-- **Yinshan (Lilian) Lin** - Backend Development & System Architecture
+The service receives XML conversion jobs, processes them in worker pods running on Kubernetes, and stores the resulting JSON files in Amazon S3. Metrics are monitored through Prometheus and visualized in Grafana, enabling detailed scalability and fault-tolerance analysis.
 
 ## 🏗️ Architecture
 
@@ -29,103 +17,48 @@ This project bridges that gap with a high-performance, distributed conversion se
 - **Infrastructure as Code**: Terraform
 - **Monitoring**: Prometheus + Grafana
 
-## 📊 Current Status
 
-### ✅ Completed Features
-- [x] Core XML-to-JSON conversion engine
-- [x] AWS S3 integration for result storage
-- [x] Amazon SQS integration for job queuing
-- [x] Dead Letter Queue (DLQ) for error handling
-- [x] Multi-stage Docker containerization
-- [x] Complete Terraform infrastructure automation
-- [x] EKS cluster deployment with managed node groups
-- [x] Prometheus monitoring infrastructure
-- [x] LoadBalancer service for external access
-- [x] Horizontal Pod Autoscaler (HPA) configuration
-- [x] **Experiment 1**: Horizontal Scaling (tested 1, 2, 4, 8 pods)
-- [x] **Experiment 2**: Elasticity with burst load testing
 
-## 🔬 Experiments Conducted
+## 📁 Development Motivation
 
-**Experiment 1 - Horizontal Scalability** ✅
-- **Objective**: Measure throughput and latency scaling across 1→8 pod replicas
-- **Results**: Peak throughput of 833 RPS at 2-4 pods, identified resource bottlenecks at 8 pods
-- **Evidence**: Load test reports in `test/exp1/` directory
+Modern distributed systems must support high throughput, dynamic scaling, and graceful failure handling.
+The motivation behind this project is to explore these real-world challenges by building a system that:
 
-**Experiment 2 - Elasticity Under Burst Load** ✅  
-- **Objective**: Validate HPA effectiveness during traffic spikes (10→100→1000 msg/sec)
-- **Results**: System scaled 2→8 pods within 60s, maintained queue depth <50 messages
-- **Evidence**: CSV metrics and test scripts in `test/exp2/` directory
+Scales horizontally under increasing load
 
-**Experiment 3 - Fault Tolerance** ✅
-- **Objective**: Evaluate system resilience under malformed input, S3 outages, and pod failures
-- **Results**: 
-  - **Malformed XML**: 98.7% detection rate, 0 pod crashes, DLQ routing successful
-  - **S3 Outage**: Zero data loss, automatic recovery in 28 seconds via SQS visibility timeout
-  - **Pod Failure**: 7/8 pods crashed, system maintained operation, HPA recovered within 6 minutes
-- **Evidence**: Documented in `report/CS6650-Final-Project-Report.md`
+Recovers gracefully from downstream failures (e.g., S3 outages)
 
-## 📁 Project Structure
+Ensures message durability using SQS
 
-```
-xml-json-converter/
-├── main.go                     # SQS worker entry point
-├── handler/
-│   ├── convert.go             # XML-to-JSON parser core
-│   └── job_processor.go       # S3 download/upload + conversion
-├── sample/
-│   ├── test.xml               # Sample XML log file
-│   └── genxml.go              # XML generator for testing
-├── terraform/
-│   ├── main.tf                # EKS, SQS, S3, ECR infrastructure
-│   ├── experiment1.tfvars     # Config for horizontal scaling test
-│   ├── experiment2.tfvars     # Config for elasticity test
-│   ├── deploy-experiment1.sh  # Deployment script for Exp 1
-│   └── deploy-experiment2.sh  # Deployment script for Exp 2
-├── test/
-│   ├── exp1/                  # Experiment 1: Horizontal Scaling
-│   │   ├── locustfile.py      # HTTP load test definition
-│   │   └── *.html             # Test results (1,2,4,8 pods)
-│   └── exp2/                  # Experiment 2: Elasticity
-│       ├── run-elasticity-test.sh
-│       └── *.csv              # Burst test metrics
-├── report/                    # 📄 Detailed documentation
-│   ├── CS6650-Final-Project-Report.md
-│   ├── Architecture-Diagram.md
-│   ├── Experiment-Plans.md
-│   └── Technical-Implementation-Details.md
-├── Dockerfile                 # Multi-stage build
-├── QUICKSTART.md              # Quick experiment guide
-└── README.md                  # This file
-```
+Provides observability for debugging and performance tuning
+
+Implements autoscaling strategies (CPU-based HPA and potential queue-based autoscaling)
+
+This project allowed us to apply key concepts learned in CS6650—such as asynchronous messaging, autoscaling, load shedding, distributed fault tolerance, and infrastructure-as-code—and test them in an end-to-end real cloud environment.
 
 ## 📄 Documentation
 
-**Complete project report and documentation available in the [`Report/`](./Report/) folder:**
+**Complete project report and documentation available in the [`report/`](./report/) folder:**
 
-1. **[Final Project Report](./Report/CS6650-Final-Project-Report.md)** - Main report (< 5 pages)
+1. **[Final Project Report](./report/report.md)** - Main report
    - Project overview and motivation
    - System architecture
    - Implementation details
    - Current progress and future work
 
-2. **[Architecture Diagrams](./Report/Architecture-Diagram.md)** - Visual system design
+2. **[Architecture Diagrams](./report/graph/architecture.png)** - Visual system design
    - Current architecture
    - Planned architecture with SQS
-   - Data flow diagrams
+   - [Data flow diagrams](./report/graph/Data-flow.png)
    - Monitoring architecture
 
-3. **[Experiment Plans](./Report/Experiment-Plans.md)** - Scalability testing methodology
+3. **[Experiment Report](./report/Experiment report.pdf)** - Scalability testing methodology
    - Horizontal scaling experiments
    - Burst load testing
    - Fault tolerance validation
    - Cost-performance analysis
 
-4. **[Technical Implementation](./Report/Technical-Implementation-Details.md)** - Deep dive
-   - Code walkthrough
-   - Infrastructure configuration
-   - Deployment procedures
-   - Known issues and limitations
+
 
 ## 🚀 Quick Start
 
@@ -206,15 +139,7 @@ ab -n 1000 -c 10 http://localhost:8080/convert
 
 This project demonstrates practical application of CS6650 concepts:
 
-- **Horizontal Scaling**: Kubernetes deployment enables adding worker replicas without code changes
-- **Load Balancing**: Kubernetes Service distributes requests across pods using round-robin
-- **Asynchronous Processing**: SQS integration implements producer-consumer pattern
-- **Dead Letter Queues**: Error handling strategy for fault tolerance
-- **Auto-scaling**: HPA configuration applies elasticity concepts
-- **Infrastructure as Code**: Terraform follows "cattle not pets" philosophy  
-- **Observability**: Prometheus integration enables metric-driven decisions
-
-See detailed experiment results in [`report/CS6650-Final-Project-Report.md`](./report/CS6650-Final-Project-Report.md)
+See [Experiment Plans](./report/Experiment report.mpdf) for detailed methodology.
 
 ## 🛠️ Technology Stack
 
@@ -240,51 +165,5 @@ See detailed experiment results in [`report/CS6650-Final-Project-Report.md`](./r
 4. **Multi-stage Docker**: Minimal image size (~20MB) for fast deployment
 5. **Asynchronous S3 Upload**: Non-blocking response to clients
 
-## 📝 Future Enhancements
 
-### Phase 2 (Next Sprint)
-- SQS integration for distributed job processing
-- Dead Letter Queue for failed conversions
-- Prometheus metrics instrumentation
-- HPA configuration
-
-### Phase 3 (Future)
-- Grafana dashboards
-- Distributed tracing (Jaeger)
-- Multi-region deployment
-- Streaming parser for large files
-- Batch processing support
-
-## 🤝 Contributing
-
-This is a CS6650 final project. For questions or suggestions, please open an issue.
-
-## 📜 License
-
-Academic project for CS6650 - Building Scalable Distributed Systems
-
-## 🙏 Acknowledgments
-
-- CS6650 course staff
-- AWS for cloud infrastructure
-- Open-source Go community
-
-## 🔄 Development Activity
-
-This repository shows active development with:
-- **20+ commits** documenting incremental progress
-- **Experiment iterations** visible in git history (see `test/exp2/*.csv` timestamps)
-- **Infrastructure evolution** from HTTP-based to SQS-based architecture
-- **Terraform refinements** across experiment configurations
-
-View commit history: `git log --oneline --graph`
-
----
-
-## 📚 Documentation
-
-- **[QUICKSTART.md](./QUICKSTART.md)** - Quick commands to run experiments
-- **[report/CS6650-Final-Project-Report.md](./report/CS6650-Final-Project-Report.md)** - Complete project report with experiment results
-- **[report/Architecture-Diagram.md](./report/Architecture-Diagram.md)** - System design and data flow diagrams  
-- **[report/Experiment-Plans.md](./report/Experiment-Plans.md)** - Detailed experiment methodology
-- **[report/Technical-Implementation-Details.md](./report/Technical-Implementation-Details.md)** - Code walkthrough and infrastructure details
+**For detailed technical documentation, please see the [report folder](./report/).**
